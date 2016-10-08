@@ -34,7 +34,7 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            "pansh = panshell.core:pansh"
+            "pansh = panshell.main:pansh"
         ]
     }
 )
