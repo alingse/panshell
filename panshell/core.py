@@ -23,11 +23,19 @@ class Shell(cmd.Cmd):
     
     prompt = 'pansh$>'
 
+    def __init__(self):        
+        
+        cmd.Cmd.__init__(self)
+
+        self.fs = None
+        self.stack = []
+
     def plugin(self,fscls,**kwargs):
         if super(fscls) != fs:
-            raise Exception('must inherit `panshell.core.fs`')
+            raise Exception('must inherit `panshell.core.fs`')        
         tmp = fscls(**kwargs)
         del tmp
+
     
     def __getattribute__(self,attr):
         print(attr)
