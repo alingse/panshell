@@ -29,12 +29,18 @@ class Shell(cmd.Cmd):
 
         self.fs = None
         self.stack = []
+        self.fsmap = {}
 
-    def plugin(self,fscls,**kwargs):
+    def plugin(self,fscls,**kwargs):        
         if super(fscls) != fs:
             raise Exception('must inherit `panshell.core.fs`')
+        name = fscls.name
+        if name in self.fsmap:
+            raise Exception('fs <{}> has already plugin in '.format(name))
         tmp = fscls(**kwargs)
         del tmp
+
+        self.fsmap[name] = fscls
 
     
     def __getattribute__(self,attr):
