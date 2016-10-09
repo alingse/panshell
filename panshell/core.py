@@ -33,16 +33,16 @@ class Shell(cmd.Cmd):
 
         self.keywords = ['use','exit']
 
-    def plugin(self,fscls,**kwargs):
+    def plugin(self,fscls,**setting):
         if fscls.__bases__[0] != FS:
             raise Exception('must inherit `panshell.core.fs`')
         name = fscls.name
         if name in self.fsmap:
             raise Exception('fs <{}> has already plugin in '.format(name))
 
-        tmp = fscls(**kwargs)
-        del tmp
-        self.fsmap[name] = fscls
+        _ = fscls(**setting)
+        del _
+        self.fsmap[name] = (fscls,setting)
 
     def __getattr__(self,attr):
         if attr.startswith('do_'):
@@ -65,8 +65,8 @@ class Shell(cmd.Cmd):
         if name not in self.fsmap:
             raise Exception('not plugin in')
 
-        fscls = self.fsmap[name]
-        fs = fscls()
+        fscls,setting = self.fsmap[name]
+        fs = fscls(**setting)
 
         if self.fs != None:
             self.stack.append(self.fs)
