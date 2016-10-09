@@ -14,7 +14,7 @@ class fs(object):
         self.name = name
         prompt = kwargs.pop('prompt',None)
         if not prompt:
-            prompt = _prompt.format(name)
+            prompt = self._prompt.format(name)
 
         self.prompt = prompt
 
@@ -41,7 +41,6 @@ class Shell(cmd.Cmd):
         del tmp
 
         self.fsmap[name] = fscls
-
     
     def __getattribute__(self,attr):
         print(attr)
