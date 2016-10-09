@@ -31,28 +31,32 @@ class Shell(cmd.Cmd):
         self.stack = []
         self.fsmap = {}
 
-    def plugin(self,fscls,**kwargs):        
-        if super(fscls) != FS:
+        self.keywords = ['use']
+
+    def plugin(self,fscls,**kwargs):
+        if fscls.__bases__[0] != FS:
             raise Exception('must inherit `panshell.core.fs`')
         name = fscls.name
         if name in self.fsmap:
             raise Exception('fs <{}> has already plugin in '.format(name))
+        #try it
         tmp = fscls(**kwargs)
         del tmp
-
         self.fsmap[name] = fscls
-    
-    def __getattribute__(self,attr):
-        print(attr)
-        value = self.__getattr__(attr)
-        return value
+
+    def __getattr__(self,attr):
+        if attr not in self.keywords:
+            def f (x,y):
+                print(x,y)
+            if attr.startswith('do_'):
+                return lambda x:f(self,x)
+                
+        return cmd.Cmd.__getattr__(self,attr)
 
 
     def do_use(self,name):
         print(name)
 
-    def do_exit(self,line):
-        sys.exit(0)
 
     def run(self):
         self.cmdloop()
