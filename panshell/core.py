@@ -1,24 +1,25 @@
 #coding=utf-8
 
 import cmd
-import  readline
+import readline
+import sys
 
-class fsAction(object):
-    """docstring for fsAction"""
+class fs(object):
+    
+    """ 抽象的 filesystem """
+    _prompt = '{}-sh$>'
 
-    def do_ls(self, path='.'):
-        pass
+    def __init__(self,name,**kwargs):
+        """  """
+        self.name = name
+        prompt = kwargs.pop('prompt',None)
+        if not prompt:
+            prompt = _prompt.format(name)
 
-    def do_cd(self,path=None):
-        pass
-
-    def do_login(self,line):
-        pass
-
-    def do_exit(self,line):
-        pass
+        self.prompt = prompt
 
 
+        
 
 class Shell(cmd.Cmd):
     
@@ -26,6 +27,9 @@ class Shell(cmd.Cmd):
 
     def do_use(self,name):
         print(name)
+
+    def do_exit(self,line):
+        sys.exit(0)
 
     def run(self):
         self.cmdloop()
