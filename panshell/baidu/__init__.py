@@ -2,10 +2,10 @@
 #author@alingse
 #2016.10.09
 
-from panshell.core import fs
+from panshell.core import FS
 
 
-class baidu(fs):
+class baidu(FS):
     name = 'baidu'
     def __init__(self,**kwargs):
         super(baidu,self).__init__(self,name=name,**kwargs)

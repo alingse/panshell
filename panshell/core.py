@@ -4,7 +4,7 @@ import cmd
 import readline
 import sys
 
-class fs(object):
+class FS(object):
     
     """ 抽象的 filesystem """
     _prompt = '{}-sh$>'
@@ -32,7 +32,7 @@ class Shell(cmd.Cmd):
         self.fsmap = {}
 
     def plugin(self,fscls,**kwargs):        
-        if super(fscls) != fs:
+        if super(fscls) != FS:
             raise Exception('must inherit `panshell.core.fs`')
         name = fscls.name
         if name in self.fsmap:
