@@ -21,10 +21,12 @@ class FS(object):
 
 class Shell(cmd.Cmd):
     
-    prompt = 'pansh$>'
+    _prompt = 'pansh$>'
 
     def __init__(self):        
         
+        self.prompt = _prompt
+
         cmd.Cmd.__init__(self)
 
         self.fs = None
@@ -54,7 +56,6 @@ class Shell(cmd.Cmd):
 
         return cmd.Cmd.__getattr__(self,attr)
 
-
     def do_use(self,name):
         """use <fs> 选择使用某个fs
            
@@ -65,13 +66,14 @@ class Shell(cmd.Cmd):
         if name not in self.fsmap:
             raise Exception('not plugin in')
 
-        fscls,setting = self.fsmap[name]
+        fscls, setting = self.fsmap[name]
         fs = fscls(**setting)
 
         if self.fs != None:
             self.stack.append(self.fs)
 
         self.fs = fs
+        self.prompt = fs.prompt
 
     def do_exit(self,line):
         pass
