@@ -32,7 +32,7 @@ class Shell(cmd.Cmd):
 
     def plugin(self,fscls,**kwargs):
         if super(fscls) != fs:
-            raise Exception('must inherit `panshell.core.fs`')        
+            raise Exception('must inherit `panshell.core.fs`')
         tmp = fscls(**kwargs)
         del tmp
 
