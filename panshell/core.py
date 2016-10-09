@@ -25,7 +25,7 @@ class Shell(cmd.Cmd):
 
     def __init__(self):        
         
-        self.prompt = _prompt
+        self.prompt = self._prompt
 
         cmd.Cmd.__init__(self)
 
