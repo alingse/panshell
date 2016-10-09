@@ -19,11 +19,16 @@ class fs(object):
         self.prompt = prompt
 
 
-        
-
 class Shell(cmd.Cmd):
     
     prompt = 'pansh$>'
+    fs = None
+
+    def __getattr__(self,attr):
+        print(attr)
+
+        value = super(Shell).__getattr__(self,attr)
+        return value
 
     def do_use(self,name):
         print(name)
