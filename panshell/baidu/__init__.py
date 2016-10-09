@@ -8,7 +8,8 @@ from panshell.core import FS
 class baidu(FS):
     name = 'baidu'
     def __init__(self,**kwargs):
-        super(baidu,self).__init__(self,name=name,**kwargs)
+        name = kwargs.pop('name',self.name)
+        FS.__init__(self,name,**kwargs)
 
     def do_ls(self,line):
         print(self.name,'ls')
