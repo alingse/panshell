@@ -22,13 +22,18 @@ class fs(object):
 class Shell(cmd.Cmd):
     
     prompt = 'pansh$>'
-    fs = None
 
-    def __getattr__(self,attr):
+    def plugin(self,fscls,**kwargs):
+        if super(fscls) != fs:
+            raise Exception('must inherit `panshell.core.fs`')
+        tmp = fscls(**kwargs)
+        del tmp
+    
+    def __getattribute__(self,attr):
         print(attr)
-
-        value = super(Shell).__getattr__(self,attr)
+        value = self.__getattr__(attr)
         return value
+
 
     def do_use(self,name):
         print(name)
