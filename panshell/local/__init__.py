@@ -4,7 +4,7 @@
 
 from panshell.core import FS
 
-class local(FS):
+class localFS(FS):
     name = 'local'
     def __init__(self,**kwargs):
         name = kwargs.pop('name',self.name)
@@ -14,4 +14,4 @@ class local(FS):
         print(self.name,'ls')
 
 if __name__ == '__main__':
-    fs = local()
+    fs = localFS()

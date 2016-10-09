@@ -5,7 +5,7 @@
 from panshell.core import FS
 
 
-class baidu(FS):
+class baiduFS(FS):
     name = 'baidu'
     def __init__(self,**kwargs):
         name = kwargs.pop('name',self.name)
@@ -13,3 +13,6 @@ class baidu(FS):
 
     def do_ls(self,line):
         print(self.name,'ls')
+
+if __name__ == '__main__':
+    fs = baiduFS()
