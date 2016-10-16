@@ -33,10 +33,11 @@ class Shell(cmd.Cmd):
         self.stack = []
         self.fsmap = {}
 
-        self.keywords = ['use','exit']
+        self._keywords = ['use','exit']
 
     def plugin(self,fscls,**setting):
-        if fscls.__bases__[0] != FS:
+        if not issubclass(fscls,FS):
+            print(fscls.__bases__)
             raise Exception('must inherit `panshell.core.fs`')
         name = fscls.name
         if name in self.fsmap:
@@ -47,13 +48,10 @@ class Shell(cmd.Cmd):
         self.fsmap[name] = (fscls,setting)
 
     def __getattr__(self,attr):
-        if attr.startswith('do_'):
-            attr = attr[3:]
-            if attr not in self.keywords:
-                def f (x,y):
-                    print(x,y)
-                return lambda x:f(self,x)
-
+        if attr.startswith('do_'):            
+            key = attr[3:]
+            if key not in self._keywords:
+                return getattr(self.fs,attr)
         return cmd.Cmd.__getattr__(self,attr)
 
     def do_use(self,name):
@@ -66,9 +64,8 @@ class Shell(cmd.Cmd):
         if name not in self.fsmap:
             raise Exception('not plugin in')
 
-        fscls, setting = self.fsmap[name]
+        fscls, setting = self.fsmap[name]    
         fs = fscls(**setting)
-
         if self.fs != None:
             self.stack.append(self.fs)
 
@@ -76,10 +73,18 @@ class Shell(cmd.Cmd):
         self.prompt = fs.prompt
 
     def do_exit(self,line):
+        if self.fs == None:
+            print('exit-it')
+            sys.exit(0)
 
-        pass
+        self.fs.do_exit(line)
+        if len(self.stack) > 0:
+            fs = self.stack.pop()
+            self.fs = fs
+            self.prompt = fs.prompt
+        else:
+            self.fs = None
+            self.prompt = self._prompt
 
     def run(self):
         self.cmdloop()
-
-
