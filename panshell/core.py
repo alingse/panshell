@@ -2,6 +2,7 @@
 
 import cmd
 import readline
+import inspect
 import sys
 
 class FS(object):
@@ -32,7 +33,8 @@ class Shell(cmd.Cmd):
         self.fs = None
         self.stack = []
         self.fsmap = {}
-
+        
+        self._funcs = []
         self._keywords = ['use','exit']
 
     def plugin(self,fscls,**setting):
@@ -54,6 +56,27 @@ class Shell(cmd.Cmd):
                 return getattr(self.fs,attr)
         return cmd.Cmd.__getattr__(self,attr)
 
+    def _plugin_in(self,fs):
+
+        for f in dir(fs):
+            if inspect.ismethod(f):
+                if f.__name__.startswith('do_'):
+                    name = f.__name__
+                    key = name[3:]
+                    if key not in self._keywords:         
+                        self._funcs.append(key)
+                        self.__dict__[name] = f
+        
+
+    def _plugin_out(self):
+
+        for key in self._funcs:
+            name = 'do_' + key
+            del self.__dict__[name]
+        
+        self._funcs = []
+
+
     def do_use(self,name):
         """use <fs> 选择使用某个fs
            
@@ -66,11 +89,17 @@ class Shell(cmd.Cmd):
 
         fscls, setting = self.fsmap[name]    
         fs = fscls(**setting)
+
         if self.fs != None:
+            # plugin out
+            self._plugin_out()
             self.stack.append(self.fs)
 
         self.fs = fs
         self.prompt = fs.prompt
+        # plugin in
+        self._plugin_in(fs)
+
 
     def do_exit(self,line):
         """
@@ -81,10 +110,14 @@ class Shell(cmd.Cmd):
             sys.exit(0)
 
         self.fs.do_exit(line)
+        # plugin out
+        self._plugin_out()
         if len(self.stack) > 0:
             fs = self.stack.pop()
             self.fs = fs
             self.prompt = fs.prompt
+            # plugin in
+            self._plugin_in(fs)
         else:
             self.fs = None
             self.prompt = self._prompt
