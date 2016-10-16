@@ -73,6 +73,9 @@ class Shell(cmd.Cmd):
         self.prompt = fs.prompt
 
     def do_exit(self,line):
+        """
+        退出 当前shell 或 fs
+        """
         if self.fs == None:
             print('exit-it')
             sys.exit(0)
