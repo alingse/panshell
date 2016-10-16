@@ -14,7 +14,10 @@ class baiduFS(FS):
 
 
     def do_ls(self,line):
-        print(self.name,'ls')
+        print(self.name,'do---')
+
+    def do_exit(self,line):
+        print('exit this baidu')
 
 if __name__ == '__main__':
     fs = baiduFS()
