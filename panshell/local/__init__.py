@@ -13,5 +13,8 @@ class localFS(FS):
     def do_ls(self,line):
         print(self.name,'ls')
 
+    def do_exit(self,line):
+        print('exit this local')
+
 if __name__ == '__main__':
     fs = localFS()
