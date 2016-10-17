@@ -49,6 +49,11 @@ class Shell(cmd.Cmd):
         del _
         self.fsmap[name] = (fscls,setting)
 
+    def get_names(self):
+        """
+        replace cmd.Cmd ｀dir(self.__class__)｀
+        """
+        return dir(self)
 
     def __getattr__(self,attr):
         if attr.startswith('do_'):            
@@ -56,7 +61,6 @@ class Shell(cmd.Cmd):
             if key not in self._keywords:
                 return getattr(self.fs,attr)
         return cmd.Cmd.__getattr__(self,attr)
-
 
     def _plugin_in(self,fs):
         for name in dir(fs):
