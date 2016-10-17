@@ -14,6 +14,10 @@ class baiduFS(FS):
 
 
     def do_ls(self,line):
+        """
+        ls . 
+        ls path 
+        """
         print(self.name,'do---')
 
     def do_exit(self,line):

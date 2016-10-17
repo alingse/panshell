@@ -11,6 +11,11 @@ class localFS(FS):
         FS.__init__(self,name,**kwargs)
 
     def do_ls(self,line):
+        """
+        \"localFS\"
+        `ls `
+        `ls path`
+        """
         print(self.name,'ls')
 
     def do_exit(self,line):
