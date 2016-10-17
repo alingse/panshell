@@ -49,6 +49,7 @@ class Shell(cmd.Cmd):
         del _
         self.fsmap[name] = (fscls,setting)
 
+
     def __getattr__(self,attr):
         if attr.startswith('do_'):            
             key = attr[3:]
@@ -56,23 +57,21 @@ class Shell(cmd.Cmd):
                 return getattr(self.fs,attr)
         return cmd.Cmd.__getattr__(self,attr)
 
-    def _plugin_in(self,fs):
 
-        for f in dir(fs):
-            if inspect.ismethod(f):
-                if f.__name__.startswith('do_'):
-                    name = f.__name__
-                    key = name[3:]
-                    if key not in self._keywords:         
-                        self._funcs.append(key)
-                        self.__dict__[name] = f
-        
+    def _plugin_in(self,fs):
+        for name in dir(fs):
+            f = getattr(fs,name)
+            if inspect.ismethod(f) and name.startswith('do_'):
+                key = name[3:]
+                if key not in self._keywords:         
+                    self._funcs.append(key)
+                    setattr(self,name,f)
 
     def _plugin_out(self):
 
         for key in self._funcs:
             name = 'do_' + key
-            del self.__dict__[name]
+            delattr(self,name)
         
         self._funcs = []
 
