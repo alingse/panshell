@@ -1,9 +1,9 @@
-#coding=utf-8
+# coding=utf-8
 
 import cmd
-import readline
 import inspect
 import sys
+
 
 class FS(object):
     
@@ -79,7 +79,6 @@ class Shell(cmd.Cmd):
         
         self._funcs = []
 
-
     def do_use(self,name):
         """use <fs> 选择使用某个fs
            
@@ -93,7 +92,7 @@ class Shell(cmd.Cmd):
         fscls, setting = self.fsmap[name]    
         fs = fscls(**setting)
 
-        if self.fs != None:
+        if self.fs is not None:
             # plugin out
             self._plugin_out()
             self.stack.append(self.fs)
@@ -103,12 +102,11 @@ class Shell(cmd.Cmd):
         # plugin in
         self._plugin_in(fs)
 
-
     def do_exit(self,line):
         """
         退出 当前shell 或 fs
         """
-        if self.fs == None:
+        if self.fs is None:
             print('exit-it')
             sys.exit(0)
 
