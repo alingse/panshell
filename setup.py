@@ -1,6 +1,6 @@
-#coding=utf-8
-#author@alingse
-#2016.10.07
+# coding=utf-8
+# author@alingse
+# 2016.10.07
 
 from setuptools import setup, find_packages
 
@@ -10,8 +10,6 @@ import sys
 
 from panshell import VERSION
 
-# Based on https://github.com/pypa/sampleproject/blob/master/setup.py
-# and https://python-packaging-user-guide.readthedocs.org/
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -20,7 +18,6 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 with open(os.path.join(here, 'LICENSE'), encoding='utf-8') as f:
     license = f.read()
-    
 
 setup(
     name='panshell',

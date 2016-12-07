@@ -1,127 +1,111 @@
 # coding=utf-8
+from __future__ import print_function
 
 import cmd
 import inspect
 import sys
 
-
-class FS(object):
-    
-    """ 抽象的 filesystem """
-    _prompt = '{}-sh$>'
-
-    def __init__(self,name,**kwargs):
-        """  """
-        self.name = name
-        prompt = kwargs.pop('prompt',None)
-        if not prompt:
-            prompt = self._prompt.format(name)
-
-        self.prompt = prompt
+from panshell.base import FS
 
 
 class Shell(cmd.Cmd):
-    
+
     _prompt = 'pansh$>'
 
-    def __init__(self):        
-        
+    def __init__(self):
         self.prompt = self._prompt
+        super(Shell, self).__init__()
 
-        cmd.Cmd.__init__(self)
-
-        self.fs = None
         self.stack = []
         self.fsmap = {}
-        
-        self._funcs = []
-        self._keywords = ['use','exit']
+        self._fs = None
 
-    def plugin(self,fscls,**setting):
-        if not issubclass(fscls,FS):
-            print(fscls.__bases__)
-            raise Exception('must inherit `panshell.core.fs`')
+        self._funcs = []
+        self._keywords = ['use', 'exit']
+
+    def plugin(self, fscls, **setting):
+        if not issubclass(fscls, FS):
+            raise Exception('must inherit `panshell.core.FS`')
+
         name = fscls.name
         if name in self.fsmap:
-            raise Exception('fs <{}> has already plugin in '.format(name))
+            raise Exception('FS <{}> has already plugin in '.format(name))
 
-        _ = fscls(**setting)
-        del _
-        self.fsmap[name] = (fscls,setting)
+        fs = fscls(**setting)
+        self.fsmap[name] = (fscls, setting, fs)
 
     def get_names(self):
         """
-        replace cmd.Cmd ｀dir(self.__class__)｀
+        rewrite cmd.Cmd ｀dir(self.__class__)｀
         """
         return dir(self)
 
-    def __getattr__(self,attr):
-        if attr.startswith('do_'):            
-            key = attr[3:]
-            if key not in self._keywords:
-                return getattr(self.fs,attr)
-        return cmd.Cmd.__getattr__(self,attr)
+    def __getattr__(self, name):
+        if name.startswith('do_'):
+            action = name[3:]
+            if action not in self._keywords:
+                return getattr(self.fs, name)
 
-    def _plugin_in(self,fs):
+        return super(Shell, self).__getattr__(name)
+
+    def _plugin_in(self, fs):
         for name in dir(fs):
-            f = getattr(fs,name)
-            if inspect.ismethod(f) and name.startswith('do_'):
-                key = name[3:]
-                if key not in self._keywords:         
-                    self._funcs.append(key)
-                    setattr(self,name,f)
+            action = name[3:]
+            if name.startswith('do_') and action not in self._keywords:
+                attr = getattr(fs, name)
+                if inspect.ismethod(attr):
+                    self._funcs.append(action)
+                    setattr(self, name, attr)
 
     def _plugin_out(self):
+        for action in self._funcs:
+            name = 'do_' + action
+            delattr(self, name)
 
-        for key in self._funcs:
-            name = 'do_' + key
-            delattr(self,name)
-        
         self._funcs = []
 
-    def do_use(self,name):
+    @property
+    def fs(self):
+        return self._fs
+
+    @fs.setter
+    def fs(self, fs):
+        if self._fs is not None:
+            self._plugin_out()
+
+        self._fs = fs
+
+        if fs is not None:
+            self.prompt = fs.prompt
+            self._plugin_in(fs)
+
+    def do_use(self, name):
         """use <fs> 选择使用某个fs
-           
            use baidu
            use local
         """
-
         if name not in self.fsmap:
-            raise Exception('not plugin in')
+            raise Exception('not plugin in this FS with name %s', name)
 
-        fscls, setting = self.fsmap[name]    
+        fscls, setting, _ = self.fsmap[name]
         fs = fscls(**setting)
 
-        if self.fs is not None:
-            # plugin out
-            self._plugin_out()
-            self.stack.append(self.fs)
-
+        self.stack.append(self.fs)
         self.fs = fs
-        self.prompt = fs.prompt
-        # plugin in
-        self._plugin_in(fs)
 
-    def do_exit(self,line):
+    def do_exit(self, line):
         """
-        退出 当前shell 或 fs
+        退出 shell 或 当前 fs
         """
         if self.fs is None:
-            print('exit-it')
+            print('exit-shell', file=sys.stdout)
             sys.exit(0)
 
-        self.fs.do_exit(line)
-        # plugin out
-        self._plugin_out()
-        if len(self.stack) > 0:
-            fs = self.stack.pop()
-            self.fs = fs
-            self.prompt = fs.prompt
-            # plugin in
-            self._plugin_in(fs)
-        else:
-            self.fs = None
-            self.prompt = self._prompt
+        if 'exit' in self._funcs:
+            self.fs.do_exit(line)
+
+        fs = self.stack.pop()
+        self.fs = fs
 
     def run(self):
         self.cmdloop()
