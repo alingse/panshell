@@ -14,7 +14,7 @@ class Shell(cmd.Cmd):
 
     def __init__(self):
         self.prompt = self._prompt
-        super(Shell, self).__init__()
+        cmd.Cmd.__init__(self)
 
         self.stack = []
         self.fsmap = {}
@@ -46,7 +46,7 @@ class Shell(cmd.Cmd):
             if action not in self._keywords:
                 return getattr(self.fs, name)
 
-        return super(Shell, self).__getattr__(name)
+        return cmd.Cmd.__getattr__(name)
 
     def _plugin_in(self, fs):
         for name in dir(fs):
