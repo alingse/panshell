@@ -2,9 +2,7 @@
 # author@alingse
 # 2016.12.08
 
-from __future__ import print_function
 from copy import deepcopy
-import math
 
 maxDigits = 131
 biRadixBase = 2
@@ -18,8 +16,6 @@ lowBitMasks = [0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16
 highBitMasks = [0, 32768, 49152, 57344, 61440, 63488, 64512, 65024, 65280, 65408, 65472, 65504, 65520, 65528, 65532, 65534, 65535]
 hexToChar = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"]
 hexatrigesimalToChar = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
-chunksf = lambda data, n: [data[i:i+n] for i in range(0, len(data), n)]
-reverse = lambda x: x[::-1]
 hex4 = lambda d: hex(d)[2:].zfill(4)
 
 
@@ -32,26 +28,25 @@ class BigInt(object):
 
     @classmethod
     def from_hex(cls, hexs):
-        b = cls()
-
-        hexs = reverse(hexs)
-        chunks = chunksf(hexs, 4)
-        chunks = map(reverse, chunks)
-        for i in range(len(chunks)):
-            b.digits[i] = int(chunks[i], 16)
+        b = BigInt()
+        length = len(hexs)
+        n = (length - 1)/4 + 1
+        for i in range(n):
+            p = length - 4 * i
+            char4 = hexs[max(0, p - 4 ): p]
+            b.digits[i] = int(char4, 16)
         return b
 
     @property
     def high_index(self):
-        for i in range(len(self.digits) -1, -1, -1):
+        for i in reversed(range(self.length)):
             if self.digits[i] != 0:
                 break
         return i
 
     def to_hex(self):
         digits = self.digits[:self.high_index + 1]
-        digits = reverse(digits)
-        hexs = map(hex4, digits)
+        hexs = map(hex4, reversed(digits))
         return ''.join(hexs)
 
     def to_string(self, n):
@@ -65,69 +60,70 @@ class BigInt(object):
             o, m = biDivideModulo(o, c)
             a += hexatrigesimalToChar[m.digits[0]]
 
-        a = reverse(a)
+        a = a[::-1]
         if self.isNeg:
             a = "-" + a
         return a
 
     def num_bits(self):
-        f = self.high_index
-        e = self.digits[f]
-        b = (f + 1) * bitsPerDigit
+        index = self.high_index
+        num = index * bitsPerDigit + bitsPerDigit
+
+        e = self.digits[index]
         for i in range(bitsPerDigit):
             if (e & 32768) != 0:
                 break
-            e = e * 2
-        return b - i
+            e = e << 1
+        return num - i
 
-    def __cmp__(self, c):
-        if self.isNeg != c.isNeg:
+    def __cmp__(self, b):
+        if self.isNeg != b.isNeg:
             if self.isNeg:
                 return -1
             return 1
 
-        for b in reversed(range(self.length)):
-            if self.digits[b] > c.digits[b]:
+        for i in reversed(range(self.length)):
+            if self.digits[i] > b.digits[i]:
                 if self.isNeg:
                     return -1
                 return 1
-            if self.digits[b] < c.digits[b]:
+            if self.digits[i] < b.digits[i]:
                 if self.isNeg:
                     return 1
                 return -1
         return 0
 
-    def __add__(self, g):
+    def __add__(self, b):
 
-        if self.isNeg != g.isNeg:
-            g.isNeg = not g.isNeg
-            a = self - g
-            g.isNeg = not g.isNeg
+        if self.isNeg != b.isNeg:
+            b2 = deepcopy(b)
+            b2.isNeg = not b.isNeg
+            a = self - b2
             return a
         else:
             a = BigInt()
             f = 0
-            for i in range(len(self.digits)):
-                e = self.digits[i] + g.digits[i] + f
+            for i in range(self.length):
+                e = self.digits[i] + b.digits[i] + f
                 a.digits[i] = e & 65535
                 f = 1 if e >= biRadix else 0
 
             a.isNeg = self.isNeg
             return a
 
-    def __sub__(self, g):
+    def __sub__(self, b):
 
-        if self.isNeg != g.isNeg:
-            g.isNeg = not g.isNeg
-            a = self + g
-            g.isNeg = not g.isNeg
+        if self.isNeg != b.isNeg:
+            b2 = deepcopy(b)
+            b2.isNeg = not b.isNeg
+            a = self + b2
             return a
         else:
             a = BigInt()
             e = 0
 
-            for i in range(len(self.digits)):
-                f = self.digits[i] - g.digits[i] + e            
+            for i in range(self.length):
+                f = self.digits[i] - b.digits[i] + e            
                 a.digits[i] = f & 65535
                 if a.digits[i] < 0:
                     a.digits[i] += biRadix
@@ -135,7 +131,7 @@ class BigInt(object):
 
             if e == -1:
                 e = 0
-                for i in range(len(self.digits)):
+                for i in range(self.length):
                     f = 0 - a.digits[i] + e
                     a.digits[i] = f & 65535
                     if a.digits[i] < 0:
@@ -149,56 +145,49 @@ class BigInt(object):
 
             return a
 
-    def shiftleft(self, h):
-        d = math.floor(1.0 * h / bitsPerDigit)
-        d = int(d)
-
-        g = h % bitsPerDigit
-        c = bitsPerDigit - g
+    def shiftleft(self, n):
+        d, p = divmod(n, bitsPerDigit)
+        q = bitsPerDigit - p
 
         a = BigInt()
+        a.digits[d:] = self.digits[0 : a.length - d]
 
-        a.digits[d:] = self.digits[0 : len(a.digits) - d]
-
-        for i in range(len(a.digits) - 1, 0, -1):
-            t1 = (a.digits[i] << g) & maxDigitVal
-            t2 = (a.digits[i-1] & highBitMasks[g]) >> c
+        for i in reversed(range(1, a.length)):
+            t1 = (a.digits[i] << p) & maxDigitVal
+            t2 = (a.digits[i-1] & highBitMasks[p]) >> q
             a.digits[i] =  t1 | t2 
 
-        a.digits[0] = ((a.digits[1] << g) & maxDigitVal)
+        a.digits[0] = ((a.digits[1] << p) & maxDigitVal)
         a.isNeg = self.isNeg
         return a
 
     def shiftright(self, h):
-        d = math.floor(1.0 * h / bitsPerDigit)
-        d = int(d)
-
-        f = h % bitsPerDigit
-        g = bitsPerDigit - f
+        d, p = divmod(h, bitsPerDigit)
+        q = bitsPerDigit - p
 
         a = BigInt()
-        a.digits[d:] = self.digits[0 : len(self.digits) - d]
+        a.digits[d:] = self.digits[0 : self.length - d]
 
 
-        for i in range(len(a.digits) - 1):
-            t1 = (a.digits[i] >> f)
-            t2 = ((a.digits[i + 1] & lowBitMasks[f]) << g)
+        for i in range(self.length - 1):
+            t1 = (a.digits[i] >> p)
+            t2 = ((a.digits[i + 1] & lowBitMasks[p]) << q)
             a.digits[i] = t1 | t2
 
-        a.digits[len(a.digits) - 1] =  a.digits[len(a.digits) - 1] >> f
+        a.digits[a.length - 1] =  a.digits[a.length - 1] >> p
         a.isNeg = self.isNeg;
         return a        
 
 
 def biMultiplyByRadixPower(b, c):
     a = BigInt()
-    a.digits[c:] = b.digits[0 : len(a.digits) - c]
+    a.digits[c:] = b.digits[0 : a.length - c]
     return a
 
 
 def biDivideByRadixPower(b, c):
     a = BigInt()
-    a.digits[0: len(a.digits) - c] = b.digits[c:]
+    a.digits[0: a.length - c] = b.digits[c:]
     return a
 
 
@@ -234,7 +223,7 @@ def biMultiplyDigit(a, g):
     f = a.high_index
     e = 0
     for b in range(f + 1):
-        d = result.digits[b] + a.digits[b] *g + e
+        d = result.digits[b] + a.digits[b] * g + e
         result.digits[b] = d & maxDigitVal
         e = d >> biRadixBits
 
@@ -264,8 +253,8 @@ def biDivideModulo(g, f):
     o = BigInt()
     m = g
 
-    k = math.ceil(e * 1.0 / bitsPerDigit) - 1
-    k = int(k)
+    k, r = divmod(e, bitsPerDigit)
+    if r == 0: k -= 1
 
     h = 0
     while f.digits[k] < biHalfRadix:
@@ -273,14 +262,12 @@ def biDivideModulo(g, f):
         h += 1
         e += 1
 
-        k = math.ceil(e * 1.0 / bitsPerDigit) - 1
-        k = int(k)
+        k = (e + 1)/bitsPerDigit 
 
     m = m.shiftleft(h)
     a += h
 
-    u = math.ceil(a * 1.0 / bitsPerDigit) - 1
-    u = int(u)
+    u = (a + 1) / bitsPerDigit
 
     B = biMultiplyByRadixPower(f, u - k)
 
@@ -289,16 +276,16 @@ def biDivideModulo(g, f):
         m = m - B
 
     for z in range(u, k, -1):
-        l = 0 if z >= len(m.digits) else m.digits[z]
-        A = 0 if z - 1 >= len(m.digits) else m.digits[z - 1]
-        w = 0 if z - 2 >= len(m.digits) else m.digits[z - 2]
-        v = 0 if k >= len(f.digits) else f.digits[k]
-        c = 0 if k - 1 >= len(f.digits) else f.digits[k - 1]
+        l = 0 if z >= m.length else m.digits[z]
+        A = 0 if z - 1 >= m.length else m.digits[z - 1]
+        w = 0 if z - 2 >= m.length else m.digits[z - 2]
+        v = 0 if k >= f.length else f.digits[k]
+        c = 0 if k - 1 >= f.length else f.digits[k - 1]
 
         if l == v:
             o.digits[z - k - 1] = maxDigitVal
         else:
-            o.digits[z - k - 1] = int(math.floor((1.0 * l * biRadix + A) / v))
+            o.digits[z - k - 1] = (l * biRadix + A)/ v
 
         s = o.digits[z - k - 1] *  ((v * biRadix) + c)
         p = (l * biRadixSquared) + ((A * biRadix) + w)
@@ -393,65 +380,63 @@ class BarrettMu(object):
 
 class RSAKeyPair(object):
 
-    def __init__(self, b, c, public_key):
-        self.e = BigInt.from_hex(b)
-        self.d = BigInt.from_hex(c)
-        self.m = BigInt.from_hex(public_key)
+    def __init__(self, e, d, public_key):
+        self.e = BigInt.from_hex(e)
+        self.d = BigInt.from_hex(d)
+        self.public_key = BigInt.from_hex(public_key)
 
-        self.chunkSize = 2 * self.m.high_index
+        self.chunkSize = 2 * self.public_key.high_index
         self.radix = 16
-        self.barrett = BarrettMu(self.m)
+        self.barrett = BarrettMu(self.public_key)
 
 
-def encryptedString(l, o):
-    h = []
-    b = len(o)
+def encryptedString(rsa_pair, string):
+    chunkSize = rsa_pair.chunkSize
 
-    for f in range(b):
-        h.append(ord(o[f]))
-    # h = map(ord, o)
+    h = map(ord, string)
+    p, q = divmod(len(h), chunkSize)
+    if q > 0:
+        h += [0]*(chunkSize - q)
+        p += 1
 
-    while len(h) % l.chunkSize != 0:
-        h.append(0)
-
-    g = len(h)
-    p = ""
-    for f in range(0, g, l.chunkSize):
+    chars = []
+    for i in range(p):
         c = BigInt()
 
-        d = f
-        for e in range(0, l.chunkSize, 2):
+        d = i * chunkSize
+        for e in range(0, chunkSize, 2):
             c.digits[e] = h[d]
             c.digits[e] += h[d + 1] << 8
             d += 2
-        n = l.barrett.powMod(c, l.e)
-        m = n.to_hex() if l.radix  == 16 else n.to_string(l.radix)
-        p += m + " "
 
-    p = p[:-1]
-    return p
-
-
-def decryptedString(e, f):
-    h = f.split(" ")
-    a = ""
-    for i in range(len(h)):
-        if e.radix == 16:
-            b = BigInt.from_hex(h[i])
+        b = rsa_pair.barrett.powMod(c, rsa_pair.e)
+        if rsa_pair.radix == 16:
+            m = b.to_hex()
         else:
-            b = biFromString(h[i], e.radix)
+            m = b.to_string()
+        chars.append(m)
+    enc = ' '.join(chars)
+    return enc
 
-        g = e.barrett.powMod(b, e.radix)
 
-        for j in range(biHighIndex(g) + 1):
-            a += chr(g.digits[j]&255)
-            a += chr(g.digits[j]>>8)
+def decryptedString(rsa_pair, enc):
+    chars = enc.split(" ")
+    a = ""
+    for char in chars:
+        if rsa_pair.radix == 16:
+            c = BigInt.from_hex(char)
+        else:
+            c = biFromString(char, rsa_pair.radix)
 
-    if ord(a[len(a) - 1]) == 0:
-        a = a[:len(a) - 1]
+        b = rsa_pair.barrett.powMod(c, rsa_pair.radix)
 
+        for i in range(b.high_index + 1):
+            a += chr(b.digits[i]&255)
+            a += chr(b.digits[i]>>8)
+
+    if ord(a[-1]) == 0:
+        a = a[: -1]
     return a
-
 
 
 if __name__ == '__main__':
@@ -459,15 +444,7 @@ if __name__ == '__main__':
     c = ''
     public_key = 'B3C61EBBA4659C4CE3639287EE871F1F48F7930EA977991C7AFE3CC442FEA49643212E7D570C853F368065CC57A2014666DA8AE7D493FD47D171C0D894EEE3ED7F99F6798B7FFD7B5873227038AD23E3197631A8CB642213B9F27D4901AB0D92BFA27542AE890855396ED92775255C977F5C302F1E7ED4B1E369C12CB6B1822F'
 
-    p = RSAKeyPair(b, c, public_key)
-    # print(p.e.digits)
-    # print(p.d.digits)
-    # print(p.m.digits)
-    # print(p.chunkSize)
-    # print(p.barrett.k)
-    # print(p.barrett.modulus.digits)
-    # print(p.barrett.mu.digits)
-    password = '0'
-    s = encryptedString(p, password)
+    rsa_pair = RSAKeyPair(b, c, public_key)
+    password = '012345678'
+    s = encryptedString(rsa_pair, password)
     print(s)
-    # decryptedString(p, s)
