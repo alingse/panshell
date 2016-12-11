@@ -404,11 +404,9 @@ def encryptedString(rsa_pair, string):
         c = BigInt()
 
         d = i * chunkSize
-        for e in range(0, chunkSize, 2):
-            c.digits[e] = h[d]
-            c.digits[e] += h[d + 1] << 8
-            d += 2
-
+        for e in range(chunkSize/2):
+            c.digits[e] = h[d + 2 * e]
+            c.digits[e] += h[d + 2 * e + 1] << 8
         b = rsa_pair.barrett.powMod(c, rsa_pair.e)
         if rsa_pair.radix == 16:
             m = b.to_hex()
@@ -428,11 +426,10 @@ def decryptedString(rsa_pair, enc):
         else:
             c = biFromString(char, rsa_pair.radix)
 
-        b = rsa_pair.barrett.powMod(c, rsa_pair.radix)
-
+        b = rsa_pair.barrett.powMod(c, rsa_pair.radix)        
         for i in range(b.high_index + 1):
             a += chr(b.digits[i]&255)
-            a += chr(b.digits[i]>>8)
+            a += chr(b.digits[i]>>8)            
 
     if ord(a[-1]) == 0:
         a = a[: -1]
@@ -440,11 +437,11 @@ def decryptedString(rsa_pair, enc):
 
 
 if __name__ == '__main__':
-    b = '10001'
-    c = ''
+    e = '10001'
+    d = ''
     public_key = 'B3C61EBBA4659C4CE3639287EE871F1F48F7930EA977991C7AFE3CC442FEA49643212E7D570C853F368065CC57A2014666DA8AE7D493FD47D171C0D894EEE3ED7F99F6798B7FFD7B5873227038AD23E3197631A8CB642213B9F27D4901AB0D92BFA27542AE890855396ED92775255C977F5C302F1E7ED4B1E369C12CB6B1822F'
 
-    rsa_pair = RSAKeyPair(b, c, public_key)
-    password = '012345678'
+    rsa_pair = RSAKeyPair(e, d, public_key)
+    password = '1234567'
     s = encryptedString(rsa_pair, password)
     print(s)

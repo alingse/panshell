@@ -45,10 +45,12 @@ function BarrettMu_powMod(c, f) {
         }
         e = biShiftRight(e, 1);
         if (e.digits[0] == 0 && biHighIndex(e) == 0) {
+            
             break
-        }
+        }        
         d = this.multiplyMod(d, d)
     }
+    
     return b
 }
 var biRadixBase = 2;
@@ -76,6 +78,8 @@ function setMaxDigits(b) {
 setMaxDigits(131);
 var dpl10 = 15;
 var lr10 = biFromNumber(1000000000000000);
+
+
 
 function BigInt(a) {
     if (typeof a == "boolean" && a == true) {
@@ -210,6 +214,8 @@ function hexToDigit(d) {
     }
     return b
 }
+
+
 function biFromHex(e) {
     var b = new BigInt();
     var a = e.length;
@@ -266,14 +272,17 @@ function biSubtract(b, g) {
         a = new BigInt();
         var f, e;
         e = 0;
-        for (var d = 0; d < b.digits.length; ++d) {
+        
+        for (var d = 0; d < b.digits.length; ++d) {            
             f = b.digits[d] - g.digits[d] + e;
+
             a.digits[d] = f & 65535;
             if (a.digits[d] < 0) {
                 a.digits[d] += biRadix
             }
             e = 0 - Number(f < 0)
         }
+
         if (e == -1) {
             e = 0;
             for (var d = 0; d < b.digits.length; ++d) {
@@ -410,8 +419,8 @@ function biCompare(a, c) {
     return 0
 }
 function biDivideModulo(g, f) {
-    var a = biNumBits(g);
-    var e = biNumBits(f);
+    var a = biNumBits(g);    
+    var e = biNumBits(f);    
     var d = f.isNeg;
     var o, m;
     if (a < e) {
@@ -439,7 +448,8 @@ function biDivideModulo(g, f) {
         ++e;
         k = Math.ceil(e / bitsPerDigit) - 1
     }
-    m = biShiftLeft(m, h);
+
+    m = biShiftLeft(m, h);    
     a += h;
     var u = Math.ceil(a / bitsPerDigit) - 1;
     var B = biMultiplyByRadixPower(f, u - k);
@@ -447,32 +457,38 @@ function biDivideModulo(g, f) {
         ++o.digits[u - k];
         m = biSubtract(m, B)
     }
+
     for (var z = u; z > k; --z) {
         var l = (z >= m.digits.length) ? 0 : m.digits[z];
         var A = (z - 1 >= m.digits.length) ? 0 : m.digits[z - 1];
         var w = (z - 2 >= m.digits.length) ? 0 : m.digits[z - 2];
         var v = (k >= f.digits.length) ? 0 : f.digits[k];
         var c = (k - 1 >= f.digits.length) ? 0 : f.digits[k - 1];
+
+        
         if (l == v) {
             o.digits[z - k - 1] = maxDigitVal
         } else {
             o.digits[z - k - 1] = Math.floor((l * biRadix + A) / v)
+
         }
         var s = o.digits[z - k - 1] * ((v * biRadix) + c);
         var p = (l * biRadixSquared) + ((A * biRadix) + w);
+        
         while (s > p) {
             --o.digits[z - k - 1];
             s = o.digits[z - k - 1] * ((v * biRadix) | c);
             p = (l * biRadix * biRadix) + ((A * biRadix) + w)
         }
         B = biMultiplyByRadixPower(f, z - k - 1);
-        m = biSubtract(m, biMultiplyDigit(B, o.digits[z - k - 1]));
+        tttt = biMultiplyDigit(B, o.digits[z - k - 1])
+        m = biSubtract(m, tttt);
         if (m.isNeg) {
             m = biAdd(m, B);
             --o.digits[z - k - 1]
         }
     }
-    m = biShiftRight(m, h);
+    m = biShiftRight(m, h);    
     o.isNeg = g.isNeg != d;
     if (g.isNeg) {
         if (d) {
@@ -553,17 +569,20 @@ function encryptedString(l, o) {
     var g = h.length;
     var p = "";
     var e, d, c;
+    
     for (f = 0; f < g; f += l.chunkSize) {
         c = new BigInt();
-        e = 0;
+        e = 0;        
         for (d = f; d < f + l.chunkSize; ++e) {
             c.digits[e] = h[d++];
             c.digits[e] += h[d++] << 8
         }
+        console.log(c.digits);
         var n = l.barrett.powMod(c, l.e);
         var m = l.radix == 16 ? biToHex(n) : biToString(n, l.radix);
         p += m + " "
     }
+
     return p.substring(0, p.length - 1)
 }
 function decryptedString(e, f) {
@@ -579,7 +598,7 @@ function decryptedString(e, f) {
         }
         g = e.barrett.powMod(b, e.d);
         for (c = 0; c <= biHighIndex(g); ++c) {
-            a += String.fromCharCode(g.digits[c] & 255, g.digits[c] >> 8)
+            a += String.fromCharCode(g.digits[c] & 255, g.digits[c] >> 8);            
         }
     }
     if (a.charCodeAt(a.length - 1) == 0) {
@@ -587,3 +606,10 @@ function decryptedString(e, f) {
     }
     return a
 }
+
+
+var public_key = 'B3C61EBBA4659C4CE3639287EE871F1F48F7930EA977991C7AFE3CC442FEA49643212E7D570C853F368065CC57A2014666DA8AE7D493FD47D171C0D894EEE3ED7F99F6798B7FFD7B5873227038AD23E3197631A8CB642213B9F27D4901AB0D92BFA27542AE890855396ED92775255C977F5C302F1E7ED4B1E369C12CB6B1822F'
+var password = '1234567'
+var p = new RSAKeyPair("10001", "",public_key);
+pwd = encryptedString(p, password);
+console.log(pwd);
