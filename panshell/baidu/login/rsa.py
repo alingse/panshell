@@ -16,6 +16,7 @@ lowBitMasks = [0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16
 highBitMasks = [0, 32768, 49152, 57344, 61440, 63488, 64512, 65024, 65280, 65408, 65472, 65504, 65520, 65528, 65532, 65534, 65535]
 hexToChar = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"]
 hexatrigesimalToChar = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
+charToHex = dict(zip(hexatrigesimalToChar, range(len(hexatrigesimalToChar))))
 hex4 = lambda d: hex(d)[2:].zfill(4)
 
 
@@ -33,9 +34,27 @@ class BigInt(object):
         n = (length - 1)/4 + 1
         for i in range(n):
             p = length - 4 * i
-            char4 = hexs[max(0, p - 4 ): p]
+            char4 = hexs[max(0, p - 4): p]
             b.digits[i] = int(char4, 16)
         return b
+
+    @classmethod
+    def from_string(cls, string, radix):
+        m = BigInt()
+
+        isNeg = bool(string[0] == '-')
+        start = 1 if isNeg else 0
+
+        b = deepcopy(bigOne)
+
+        for d in reversed(range(start, len(string))):
+            g = charToHex[string[d].lower()]
+            h = biMultiplyDigit(b, g)
+            m = m + h
+            b = biMultiplyDigit(b, radix)
+
+        m.isNeg = isNeg
+        return m
 
     @property
     def high_index(self):
@@ -123,7 +142,7 @@ class BigInt(object):
             e = 0
 
             for i in range(self.length):
-                f = self.digits[i] - b.digits[i] + e            
+                f = self.digits[i] - b.digits[i] + e
                 a.digits[i] = f & 65535
                 if a.digits[i] < 0:
                     a.digits[i] += biRadix
@@ -146,42 +165,45 @@ class BigInt(object):
             return a
 
     def shiftleft(self, n):
-        d, p = divmod(n, bitsPerDigit)
-        q = bitsPerDigit - p
+        q, r = divmod(n, bitsPerDigit)
+        d = bitsPerDigit - r
 
         a = BigInt()
-        a.digits[d:] = self.digits[0 : a.length - d]
+        a.digits[q:] = self.digits[0:a.length - q]
 
         for i in reversed(range(1, a.length)):
-            t1 = (a.digits[i] << p) & maxDigitVal
-            t2 = (a.digits[i-1] & highBitMasks[p]) >> q
-            a.digits[i] =  t1 | t2 
+            t1 = (a.digits[i] << r) & maxDigitVal
+            t2 = (a.digits[i-1] & highBitMasks[r]) >> d
+            a.digits[i] = t1 | t2
 
-        a.digits[0] = ((a.digits[1] << p) & maxDigitVal)
+        a.digits[0] = ((a.digits[1] << r) & maxDigitVal)
         a.isNeg = self.isNeg
         return a
 
     def shiftright(self, h):
-        d, p = divmod(h, bitsPerDigit)
-        q = bitsPerDigit - p
+        q, r = divmod(h, bitsPerDigit)
+        d = bitsPerDigit - r
 
         a = BigInt()
-        a.digits[d:] = self.digits[0 : self.length - d]
-
+        a.digits[q:] = self.digits[0:self.length - q]
 
         for i in range(self.length - 1):
-            t1 = (a.digits[i] >> p)
-            t2 = ((a.digits[i + 1] & lowBitMasks[p]) << q)
+            t1 = (a.digits[i] >> r)
+            t2 = ((a.digits[i + 1] & lowBitMasks[r]) << d)
             a.digits[i] = t1 | t2
 
-        a.digits[a.length - 1] =  a.digits[a.length - 1] >> p
-        a.isNeg = self.isNeg;
-        return a        
+        a.digits[a.length - 1] = a.digits[a.length - 1] >> r
+        a.isNeg = self.isNeg
+        return a
+
+bigZero = BigInt()
+bigOne = BigInt()
+bigOne.digits[0] = 1
 
 
 def biMultiplyByRadixPower(b, c):
     a = BigInt()
-    a.digits[c:] = b.digits[0 : a.length - c]
+    a.digits[c:] = b.digits[0:a.length - c]
     return a
 
 
@@ -199,7 +221,7 @@ def biModuloByRadixPower(b, c):
 
 def biMultiply(h, g):
     o = BigInt()
-    
+
     b = h.high_index
     m = g.high_index
 
@@ -208,8 +230,8 @@ def biMultiply(h, g):
 
         for j in range(b + 1):
             a = o.digits[i + j] + h.digits[j] * g.digits[i] + f
-            o.digits[i + j] = a &  maxDigitVal
-            f =  a >> biRadixBits
+            o.digits[i + j] = a & maxDigitVal
+            f = a >> biRadixBits
 
         o.digits[i + b + 1] = f
 
@@ -227,7 +249,7 @@ def biMultiplyDigit(a, g):
         result.digits[b] = d & maxDigitVal
         e = d >> biRadixBits
 
-    result.digits[f + 1] =  e
+    result.digits[f + 1] = e
     return result
 
 
@@ -253,8 +275,7 @@ def biDivideModulo(g, f):
     o = BigInt()
     m = g
 
-    k, r = divmod(e, bitsPerDigit)
-    if r == 0: k -= 1
+    k = (e - 1) / bitsPerDigit
 
     h = 0
     while f.digits[k] < biHalfRadix:
@@ -262,7 +283,7 @@ def biDivideModulo(g, f):
         h += 1
         e += 1
 
-        k = (e + 1)/bitsPerDigit 
+        k = (e + 1) / bitsPerDigit
 
     m = m.shiftleft(h)
     a += h
@@ -285,11 +306,11 @@ def biDivideModulo(g, f):
         if l == v:
             o.digits[z - k - 1] = maxDigitVal
         else:
-            o.digits[z - k - 1] = (l * biRadix + A)/ v
+            o.digits[z - k - 1] = (l * biRadix + A) / v
 
-        s = o.digits[z - k - 1] *  ((v * biRadix) + c)
+        s = o.digits[z - k - 1] * ((v * biRadix) + c)
         p = (l * biRadixSquared) + ((A * biRadix) + w)
-        
+
         while s > p:
             o.digits[z - k - 1] -= 1
             s = o.digits[z - k - 1] * ((v * biRadix) | c)
@@ -301,9 +322,8 @@ def biDivideModulo(g, f):
             m = m + B
             o.digits[z - k - 1] -= 1
 
-
     m = m.shiftright(h)
-    o.isNeg = bool(g.isNeg != d)    
+    o.isNeg = bool(g.isNeg != d)
     if g.isNeg:
         if d:
             o += bigOne
@@ -348,7 +368,7 @@ class BarrettMu(object):
 
         c = biModuloByRadixPower(h, self.k + 1)
 
-        a = c - b    
+        a = c - b
         if a.isNeg:
             a += self.bkplus1
 
@@ -394,13 +414,13 @@ def encryptedString(rsa_pair, string):
     chunkSize = rsa_pair.chunkSize
 
     h = map(ord, string)
-    p, q = divmod(len(h), chunkSize)
-    if q > 0:
-        h += [0]*(chunkSize - q)
-        p += 1
+    q, r = divmod(len(h), chunkSize)
+    if r > 0:
+        h += [0]*(chunkSize - r)
+        q += 1
 
     chars = []
-    for i in range(p):
+    for i in range(q):
         c = BigInt()
 
         d = i * chunkSize
@@ -424,12 +444,12 @@ def decryptedString(rsa_pair, enc):
         if rsa_pair.radix == 16:
             c = BigInt.from_hex(char)
         else:
-            c = biFromString(char, rsa_pair.radix)
+            c = BigInt.from_string(char, rsa_pair.radix)
 
-        b = rsa_pair.barrett.powMod(c, rsa_pair.radix)        
+        b = rsa_pair.barrett.powMod(c, rsa_pair.radix)
         for i in range(b.high_index + 1):
-            a += chr(b.digits[i]&255)
-            a += chr(b.digits[i]>>8)            
+            a += chr(b.digits[i] & 255)
+            a += chr(b.digits[i] >> 8)
 
     if ord(a[-1]) == 0:
         a = a[: -1]
