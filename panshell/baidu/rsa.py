@@ -28,6 +28,17 @@ class BigInt(object):
         self.isNeg = False
 
     @classmethod
+    def bigZero(cls):
+        b = BigInt()
+        return b
+
+    @classmethod
+    def bigOne(cls):
+        b = BigInt()
+        b.digits[0] = 1
+        return b
+
+    @classmethod
     def from_hex(cls, hexs):
         b = BigInt()
         length = len(hexs)
@@ -45,7 +56,7 @@ class BigInt(object):
         isNeg = bool(string[0] == '-')
         start = 1 if isNeg else 0
 
-        b = deepcopy(bigOne)
+        b = BigInt.bigOne()
 
         for d in reversed(range(start, len(string))):
             g = charToHex[string[d].lower()]
@@ -75,7 +86,7 @@ class BigInt(object):
         o, m = biDivideModulo(self, c)
         a = hexatrigesimalToChar[m.digits[0]]
 
-        while o > bigZero:
+        while o > BigInt.bigZero():
             o, m = biDivideModulo(o, c)
             a += hexatrigesimalToChar[m.digits[0]]
 
@@ -196,10 +207,6 @@ class BigInt(object):
         a.isNeg = self.isNeg
         return a
 
-bigZero = BigInt()
-bigOne = BigInt()
-bigOne.digits[0] = 1
-
 
 def biMultiplyByRadixPower(b, c):
     a = BigInt()
@@ -260,7 +267,7 @@ def biDivideModulo(g, f):
 
     if a < e:
         if g.isNeg:
-            o = deepcopy(bigOne)
+            o = BigInt.bigOne()
             o.isNeg = not f.isNeg
             g.isNeg = False
             f.isNeg = False
@@ -326,9 +333,9 @@ def biDivideModulo(g, f):
     o.isNeg = bool(g.isNeg != d)
     if g.isNeg:
         if d:
-            o += bigOne
+            o += BigInt.bigOne()
         else:
-            o -= bigOne
+            o -= BigInt.bigOne()
 
         f = f.shiftright(h)
         m = f - m
@@ -409,51 +416,47 @@ class RSAKeyPair(object):
         self.radix = 16
         self.barrett = BarrettMu(self.public_key)
 
+    def encrypt(self, string):
+        h = map(ord, string)
+        q, r = divmod(len(h), self.chunkSize)
+        if r > 0:
+            h += [0]*(self.chunkSize - r)
+            q += 1
 
-def encryptedString(rsa_pair, string):
-    chunkSize = rsa_pair.chunkSize
+        chars = []
+        for i in range(q):
+            c = BigInt()
 
-    h = map(ord, string)
-    q, r = divmod(len(h), chunkSize)
-    if r > 0:
-        h += [0]*(chunkSize - r)
-        q += 1
+            d = i * self.chunkSize
+            for e in range(self.chunkSize/2):
+                c.digits[e] = h[d + 2 * e]
+                c.digits[e] += h[d + 2 * e + 1] << 8
+            b = self.barrett.powMod(c, self.e)
+            if self.radix == 16:
+                m = b.to_hex()
+            else:
+                m = b.to_string()
+            chars.append(m)
+        enc = ' '.join(chars)
+        return enc
 
-    chars = []
-    for i in range(q):
-        c = BigInt()
+    def decrypt(self, enc):
+        chars = enc.split(" ")
+        a = ""
+        for char in chars:
+            if self.radix == 16:
+                c = BigInt.from_hex(char)
+            else:
+                c = BigInt.from_string(char, self.radix)
 
-        d = i * chunkSize
-        for e in range(chunkSize/2):
-            c.digits[e] = h[d + 2 * e]
-            c.digits[e] += h[d + 2 * e + 1] << 8
-        b = rsa_pair.barrett.powMod(c, rsa_pair.e)
-        if rsa_pair.radix == 16:
-            m = b.to_hex()
-        else:
-            m = b.to_string()
-        chars.append(m)
-    enc = ' '.join(chars)
-    return enc
+            b = self.barrett.powMod(c, self.radix)
+            for i in range(b.high_index + 1):
+                a += chr(b.digits[i] & 255)
+                a += chr(b.digits[i] >> 8)
 
-
-def decryptedString(rsa_pair, enc):
-    chars = enc.split(" ")
-    a = ""
-    for char in chars:
-        if rsa_pair.radix == 16:
-            c = BigInt.from_hex(char)
-        else:
-            c = BigInt.from_string(char, rsa_pair.radix)
-
-        b = rsa_pair.barrett.powMod(c, rsa_pair.radix)
-        for i in range(b.high_index + 1):
-            a += chr(b.digits[i] & 255)
-            a += chr(b.digits[i] >> 8)
-
-    if ord(a[-1]) == 0:
-        a = a[: -1]
-    return a
+        if ord(a[-1]) == 0:
+            a = a[: -1]
+        return a
 
 
 if __name__ == '__main__':
@@ -463,5 +466,5 @@ if __name__ == '__main__':
 
     rsa_pair = RSAKeyPair(e, d, public_key)
     password = '1234567'
-    s = encryptedString(rsa_pair, password)
+    s = rsa_pair.encrypt(password)
     print(s)

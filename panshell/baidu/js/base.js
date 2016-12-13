@@ -577,7 +577,6 @@ function encryptedString(l, o) {
             c.digits[e] = h[d++];
             c.digits[e] += h[d++] << 8
         }
-        console.log(c.digits);
         var n = l.barrett.powMod(c, l.e);
         var m = l.radix == 16 ? biToHex(n) : biToString(n, l.radix);
         p += m + " "
