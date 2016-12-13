@@ -8,11 +8,11 @@ import sys
 import time
 
 
-from const import PUBLIC_KEY
-from const import RSA_E
-from const import RSA_D
+from .const import PUBLIC_KEY
+from .const import RSA_E
+from .const import RSA_D
 
-from rsa import RSAKeyPair
+from .rsa import RSAKeyPair
 
 
 headers = {

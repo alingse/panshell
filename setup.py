@@ -2,11 +2,9 @@
 # author@alingse
 # 2016.10.07
 
-from setuptools import setup, find_packages
-
 from codecs import open
 import os
-import sys
+from setuptools import setup, find_packages
 
 from panshell import VERSION
 
@@ -27,7 +25,7 @@ setup(
     author='alingse',
     author_email='alingse@foxmail.com',
     license=license,
-    packages=find_packages(exclude=['tests','docs']),
+    packages=find_packages(exclude=['tests', 'docs']),
     include_package_data=True,
     entry_points={
         'console_scripts': [
