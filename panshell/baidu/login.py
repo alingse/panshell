@@ -3,10 +3,8 @@
 # 2016.06.22
 
 import logging
-import requests
 import sys
 import time
-
 
 from .const import PUBLIC_KEY
 from .const import RSA_E
@@ -18,7 +16,6 @@ from .rsa import RSAKeyPair
 headers = {
     "Accept-Language": "zh-CN,zh;q=0.8,en;q=0.6",
     "Accept-Encoding": "gzip, deflate, sdch",
-    "Host": "wappass.baidu.com",
     "Accept": "application/json",
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1",
     "Connection": "keep-alive",
@@ -102,7 +99,7 @@ def post_login(session, servertime, username, encrypt_pwd):
 
 def login(session, username, password):
     # prepare
-    home_url = 'https://www.baidu.com/'
+    home_url = 'https://wap.baidu.com'
     passport_url = 'http://wappass.baidu.com/passport/?login&tpl=wimn&ssid%3D0%26amp%3Bfrom%3D%26amp%3Buid%3D%26amp%3Bpu%3Dsz%25401320_1001%252Cta%2540iphone_2_5.0_3_537%26amp%3Bbd_page_type%3D1&tn=&regtype=1&u=http://cp01-mi-wise32.cp01.baidu.com:8080/'
 
     visit_url(session, home_url)
@@ -126,14 +123,17 @@ def login(session, username, password):
     if result['errInfo']['no'] != '400408':
         return False
 
+    # ptoken
+    session.cookies.set('BDUSS', result['data']['bduss'])
+
     # visit goto
-    goto_url = result['data']['gotoUrl']
-    visit_url(session, goto_url)
-    # content = visit_url(session, home_url)
+    visit_url(session, result['data']['gotoUrl'])
+    visit_url(session, result['data']['u'])
     return True
 
 
 if __name__ == '__main__':
+    import requests
     username = sys.argv[1]
     password = sys.argv[2]
     session = requests.Session()
