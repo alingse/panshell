@@ -17,6 +17,7 @@ highBitMasks = [0, 32768, 49152, 57344, 61440, 63488, 64512, 65024, 65280, 65408
 hexToChar = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"]
 hexatrigesimalToChar = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
 charToHex = dict(zip(hexatrigesimalToChar, range(len(hexatrigesimalToChar))))
+dpl_10 = 15
 hex4 = lambda d: hex(d)[2:].zfill(4)
 
 
@@ -54,18 +55,56 @@ class BigInt(object):
         m = BigInt()
 
         isNeg = bool(string[0] == '-')
-        start = 1 if isNeg else 0
+        string = string.lstrip('-')
 
         b = BigInt.bigOne()
 
-        for d in reversed(range(start, len(string))):
-            g = charToHex[string[d].lower()]
+        for c in reversed(string):
+            g = charToHex[c.lower()]
             h = biMultiplyDigit(b, g)
             m = m + h
             b = biMultiplyDigit(b, radix)
 
         m.isNeg = isNeg
         return m
+
+    @classmethod
+    def from_number(cls, number):
+        a = BigInt()
+        a.isNeg = number < 0
+        number = abs(number)
+        i = 0
+        while number > 0:
+            a.digits[i] = number & maxDigitVal
+            number = number >> biRadixBits
+            i += 1
+        return a
+
+    @classmethod
+    def from_decimal(cls, string):
+        lr10 = cls.from_number(1000000000000000)
+        isNeg = bool(string[0] == '-')
+        string = string.lstrip('-').lstrip('0')
+
+        length = len(string)
+        if length == 0:
+            a = BigInt()
+        else:
+            p, q = divmod(length, dpl_10)
+            if q == 0:
+                p = p - 1
+                q = dpl_10
+            n = int(string[:q])
+            a = cls.from_number(n)
+            string = string[q:]
+            for i in range(p):
+                n = int(string[:dpl_10])
+                e = cls.from_number(n)
+                a = biMultiply(a, lr10) + e
+                string = string[dpl_10:]
+
+        a.isNeg = isNeg
+        return a
 
     @property
     def high_index(self):
@@ -93,6 +132,21 @@ class BigInt(object):
         a = a[::-1]
         if self.isNeg:
             a = "-" + a
+        return a
+
+    def to_decimal(self):
+        c = BigInt()
+        c.digits[0] = 10
+        o, m = biDivideModulo(self, c)
+        a = str(m.digits[0])
+        bigZero = BigInt.bigZero()
+        while m > bigZero:
+            o, m = biDivideModulo(m, c)
+            a += str(m.digits[0])
+
+        a = a[::-1]
+        if self.isNeg:
+            a = '-' + a
         return a
 
     def num_bits(self):
@@ -208,6 +262,34 @@ class BigInt(object):
         return a
 
 
+def biPow(c, e):
+    b = BigInt.bigOne()
+    d = deepcopy(c)
+    while True:
+        if e & 1 != 0:
+            b = biMultiply(b, d)
+        e = e >> 1
+        if e == 0:
+            break
+        d = biMultiply(d, d)
+    return b
+
+
+def biPowMod(d, g, c):
+    b = BigInt.bigOne()
+    e = deepcopy(d)
+    f = deepcopy(g)
+
+    while True:
+        if f.digits[0] & 1 != 0:
+            b = biMultiplyMod(b, e, c)
+        f = f.shiftright(1)
+        if f.digits[0] == 0 and f.high_index == 0:
+            break
+        e = biMultiplyMod(e, e, c)
+    return b
+
+
 def biMultiplyByRadixPower(b, c):
     a = BigInt()
     a.digits[c:] = b.digits[0:a.length - c]
@@ -258,6 +340,10 @@ def biMultiplyDigit(a, g):
 
     result.digits[f + 1] = e
     return result
+
+
+def biMultiplyMod(b, c, a):
+    return biModulo(biMultiply(b, c), a)
 
 
 def biDivideModulo(g, f):
@@ -349,6 +435,11 @@ def biDivideModulo(g, f):
 def biDivide(a, b):
     o, m = biDivideModulo(a, b)
     return o
+
+
+def biModulo(a, b):
+    o, m = biDivideModulo(a, b)
+    return m
 
 
 class BarrettMu(object):
