@@ -1,144 +1,120 @@
 # coding=utf-8
 # author@alingse
-# 2016.06.22
+# 2018.08.04
 
-import logging
+import json
+import os.path
+import re
+import requests
 import sys
 import time
 
-from const import PUBLIC_KEY
-from const import RSA_E
-from const import RSA_D
 
-from rsa import RSAKeyPair
+class BaiduAccount(object):
 
-
-headers = {
-    "Accept-Language": "zh-CN,zh;q=0.8,en;q=0.6",
-    "Accept-Encoding": "gzip, deflate, sdch",
-    "Accept": "application/json",
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1",
-    "Connection": "keep-alive",
-    "Pragma": "no-cache",
-    "Cache-Control": "no-cache",
-    "Referer": "http://wappass.baidu.com/passport/?login&tpl=wimn&ssid%3D0%26amp%3Bfrom%3D844b%26amp%3Buid%3D%26amp%3Bpu%3Dsz%25401320_2001%252Cta%2540iphone_1_9.1_3_601%26amp%3Bbd_page_type%3D1&tn=&regtype=1&u=https%3A%2F%2Fm.baidu.com",
-    "X-Requested-With": "XMLHttpRequest",
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36',
     }
 
-baidu_rsa = RSAKeyPair(RSA_E, RSA_D, PUBLIC_KEY)
+    token_url = 'https://passport.baidu.com/v2/api/?getapi&class=login&tpl=mn&tangram=true'
+    post_url = 'https://passport.baidu.com/v2/api/?login'
+    image_url_format = 'https://passport.baidu.com/cgi-bin/genimage?{code}'
 
-now = lambda: str(int(time.time() * 1000))
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
 
+        self.session = None
+        self.baiduid = None
+        self.bduss = None
 
-def visit_url(session, url):
-    try:
-        r = session.get(url, headers=headers, timeout=2)
-        return r.content
-    except Exception as e:
-        logging.warn(e)
+    def attach_session(self, session):
+        self.session = session
+        return self
 
+    @property
+    def check_url(self):
+        return 'https://passport.baidu.com/v2/api/?logincheck&callback=bdPass.api.login._needCodestring' \
+                'CheckCallback&tpl=mn&charset=utf-8&index=0' \
+                '&username={username}&time={time}'.format(username=self.username, time=int(time.time()))
 
-def get_servertime(session):
-    url = 'http://wappass.baidu.com/wp/api/security/antireplaytoken'
-    params = {
-        'tpl': 'wimn',
-        'v': now()
-        }
+    def get_baidu_uid(self):
+        """Get BAIDUID."""
+        self.session.get('http://www.baidu.com', headers=self.headers)
+        self.baiduid = self.session.cookies.get('BAIDUID')
 
-    try:
-        r = session.get(url, params=params, headers=headers, timeout=1)
-        return r.json()
-    except Exception as e:
-        logging.error(e)
+    def check_verify_code(self):
+        """Check if login need to input verify code."""
+        r = self.session.get(self.check_url)
+        s = r.text
+        data = json.loads(s[s.index('{'):-1])
+        if data.get('codestring'):
+            return data.get('codestring', "")
+        return ""
 
+    def handle_verify_code(self, code):
+        """Save verify code to filesystem and prompt user to input."""
+        r = self.session.get(self.image_url_format.format(code=code))
+        # FIXME use terminal better
+        img_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'vcode.png')
+        with open(img_path, mode='wb') as fp:
+            fp.write(r.content)
+        print("Saved verification code to {}".format(os.path.dirname(img_path)))
+        vcode = raw_input("Please input the captcha:\n")
+        return vcode
 
-def post_login(session, servertime, username, encrypt_pwd):
-    url = 'https://wappass.baidu.com/wp/api/login?tt=' + now()
+    def get_token(self):
+        """Get bdstoken."""
+        r = self.session.get(self.token_url)
+        s = r.text
+        token = re.search("login_token='(\w+)';", s).group(1)
+        return token
 
-    cookies = session.cookies.get_dict()
-    uid = cookies.get('BAIDU_WISE_UID', now() + '_530')
+    def post_login(self, code, vcode, token):
+        """Post login form."""
+        post_data = {'ppui_logintime': '9379', 'charset': 'utf-8', 'codestring': code, 'token': token,
+                     'isPhone': 'false', 'index': '0', 'u': '', 'safeflg': 0,
+                     'staticpage': 'http://www.baidu.com/cache/user/html/jump.html', 'loginType': '1', 'tpl': 'mn',
+                     'callback': 'parent.bdPass.api.login._postCallback', 'username': self.username,
+                     'password': self.password, 'verifycode': vcode, 'mem_pass': 'on'}
 
-    data = {
-        "tpl": "wimn",
-        "uid": uid,
-        "clientfrom": "",
-        "servertime": servertime,
-        "verifycode": "",
-        "login_share_strategy": "",
-        "connect": "0",
-        "skin": "default_v2",
-        "mobilenum": "undefined",
-        "from": "844c",
-        "ssid": "",
-        "bindToSmsLogin": "",
-        "pu": "sz%401320_2001%2Cta%40iphone_1_4.0_3_532",
-        "regist_mode": "",
-        "tn": "",
-        "subpro": "",
-        "regtype": "",
-        "type": "",
-        "username": username,
-        "logLoginType": "wap_loginTouch",
-        "password": encrypt_pwd,
-        "countrycode": "",
-        "adapter": "0",
-        "bd_page_type": "1",
-        "loginmerge": "1",
-        "client": "",
-        "action": "login",
-        "vcodestr": "",
-        "isphone": "0"
-        }
+        response = self.session.post(self.post_url, data=post_data)
+        return response
 
-    try:
-        r = session.post(url, data=data, headers=headers, timeout=3)
-        return r.json()
-    except Exception as e:
-        logging.warn(e)
+    def login(self):
+        self.get_baidu_uid()
+        code = self.check_verify_code()
+        if code:
+            vcode = self.handle_verify_code(code)
+        else:
+            vcode = ""
+        token = self.get_token()
+        response = self.post_login(code, vcode, token)
+        # error
+        if 'error=257' in response.text:
+            print(response.text)
+            code = re.findall('codestring=(.*?)&', response.text)[0]
+            vcode = self.handle_verify_code(code)
+            response = self.post_login(code, vcode, token)
+
+        print(response.cookies)
+        self.bduss = response.cookies.get("BDUSS")
 
 
 def login(session, username, password):
-    # prepare
-    home_url = 'https://wap.baidu.com'
-    passport_url = 'http://wappass.baidu.com/passport/?login&tpl=wimn&ssid%3D0%26amp%3Bfrom%3D%26amp%3Buid%3D%26amp%3Bpu%3Dsz%25401320_1001%252Cta%2540iphone_2_5.0_3_537%26amp%3Bbd_page_type%3D1&tn=&regtype=1&u=http://cp01-mi-wise32.cp01.baidu.com:8080/'
-
-    visit_url(session, home_url)
-    visit_url(session, passport_url)
-
-    # get servertime
-    result = get_servertime(session)
-    if result is None or 'time' not in result:
-        return False
-
-    servertime = result['time']
-
-    # encrypt
-    encrypt_pwd = baidu_rsa.encrypt(password + servertime)
-
-    # login
-    result = post_login(session, servertime, username, encrypt_pwd)
-    if result is None:
-        return False
-
-    if result['errInfo']['no'] != '400408':
-        return False
-
-    # ptoken
-    session.cookies.set('BDUSS', result['data']['bduss'])
-    session.cookies.set('PTOKEN', result['data']['ptoken'])
-
-    # visit goto
-    visit_url(session, result['data']['gotoUrl'])
-    visit_url(session, result['data']['u'])
-    return True
+    """
+    暂时每次都登录
+    """
+    account = BaiduAccount(username, password)
+    account.attach_session(session)
+    account.login()
+    print(account.bduss)
+    print(account.baiduid)
+    return account
 
 
 if __name__ == '__main__':
-    import requests
-    username = sys.argv[1]
-    password = sys.argv[2]
-    session = requests.Session()
+    from requests.sessions import Session
 
-    status = login(session, username, password)
-    print(status)
-    print(session.cookies.get_dict())
+    session = Session()
+    login(session, sys.argv[1], sys.argv[2])
