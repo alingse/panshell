@@ -18,7 +18,7 @@ class Shell(cmd.Cmd):
 
         self.stack = []
         self.fsmap = {}
-        self._fs = None
+        self.fs = None
 
         self._funcs = []
         self._keywords = ['use', 'exit']
@@ -45,7 +45,6 @@ class Shell(cmd.Cmd):
             action = name[3:]
             if action not in self._keywords:
                 return getattr(self.fs, name)
-
         return cmd.Cmd.__getattr__(name)
 
     def _plugin_in(self, fs):
@@ -64,18 +63,14 @@ class Shell(cmd.Cmd):
 
         self._funcs = []
 
-    @property
-    def fs(self):
-        return self._fs
-
-    @fs.setter
-    def fs(self, fs):
-        if self._fs is not None:
+    def set_fs(self, fs):
+        if self.fs is not None:
             self._plugin_out()
+        self.fs = fs
 
-        self._fs = fs
-
-        if fs is not None:
+        if fs is None:
+            self.prompt = self._prompt
+        else:
             self.prompt = fs.prompt
             self._plugin_in(fs)
 
@@ -91,7 +86,7 @@ class Shell(cmd.Cmd):
         fs = fscls(**setting)
 
         self.stack.append(self.fs)
-        self.fs = fs
+        self.set_fs(fs)
 
     def do_exit(self, line):
         """
@@ -105,7 +100,7 @@ class Shell(cmd.Cmd):
             self.fs.do_exit(line)
 
         fs = self.stack.pop()
-        self.fs = fs
+        self.set_fs(fs)
 
     def run(self):
         self.cmdloop()

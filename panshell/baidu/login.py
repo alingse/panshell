@@ -6,11 +6,11 @@ import logging
 import sys
 import time
 
-from .const import PUBLIC_KEY
-from .const import RSA_E
-from .const import RSA_D
+from const import PUBLIC_KEY
+from const import RSA_E
+from const import RSA_D
 
-from .rsa import RSAKeyPair
+from rsa import RSAKeyPair
 
 
 headers = {
@@ -125,6 +125,7 @@ def login(session, username, password):
 
     # ptoken
     session.cookies.set('BDUSS', result['data']['bduss'])
+    session.cookies.set('PTOKEN', result['data']['ptoken'])
 
     # visit goto
     visit_url(session, result['data']['gotoUrl'])
@@ -140,3 +141,4 @@ if __name__ == '__main__':
 
     status = login(session, username, password)
     print(status)
+    print(session.cookies.get_dict())
