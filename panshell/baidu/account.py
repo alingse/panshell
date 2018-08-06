@@ -5,8 +5,6 @@
 import json
 import os.path
 import re
-import requests
-import sys
 import time
 
 
@@ -55,8 +53,9 @@ class BaiduAccount(object):
     def handle_verify_code(self, code):
         """Save verify code to filesystem and prompt user to input."""
         r = self.session.get(self.image_url_format.format(code=code))
+
         # FIXME use terminal better
-        img_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'vcode.png')
+        img_path = os.path.expanduser('~/') + 'pansh.{}.vcode.png'.format(hash(self.username))
         with open(img_path, mode='wb') as fp:
             fp.write(r.content)
         print("Saved verification code to {}".format(os.path.dirname(img_path)))
@@ -92,29 +91,69 @@ class BaiduAccount(object):
         response = self.post_login(code, vcode, token)
         # error
         if 'error=257' in response.text:
-            print(response.text)
             code = re.findall('codestring=(.*?)&', response.text)[0]
             vcode = self.handle_verify_code(code)
             response = self.post_login(code, vcode, token)
-
-        print(response.cookies)
         self.bduss = response.cookies.get("BDUSS")
 
+    @property
+    def login_status(self):
+        return self.bduss and self.baiduid
 
-def login(session, username, password):
-    """
-    暂时每次都登录
-    """
-    account = BaiduAccount(username, password)
-    account.attach_session(session)
-    account.login()
-    print(account.bduss)
-    print(account.baiduid)
-    return account
+'''
+   disk_home = 'https://pan.baidu.com/'
+
+    headers = {
+        "Accept-Language": "zh-CN,zh;q=0.8,en;q=0.6,ja;q=0.4",
+        "Accept-Encoding": "gzip, deflate, sdch, br",
+        "Host": "pan.baidu.com",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Upgrade-Insecure-Requests": "1",
+        "Connection": "keep-alive",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36"
+    }
 
 
-if __name__ == '__main__':
-    from requests.sessions import Session
+    headers = {
+        "Accept-Language": "zh-CN,zh;q=0.8,en;q=0.6,ja;q=0.4",
+        "Accept-Encoding": "gzip, deflate, sdch, br",
+        "Host": "pan.baidu.com",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Upgrade-Insecure-Requests": "1",
+        "Connection": "keep-alive",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 Safari/537.36"
+        }
 
-    session = Session()
-    login(session, sys.argv[1], sys.argv[2])
+
+    def get(self, url, headers=None, **kwargs):
+        if headers is None:
+            headers = self.headers
+
+        try:
+            print(self.session.cookies.get_dict())
+            r = self.session.get(url, headers=headers, **kwargs)
+            return r.content
+        except Exception as e:
+            logging.warn(e)
+
+    def parse_home(self):
+        content = self.get(self.disk_home)
+        if content is None:
+            return False
+        sk = content.find('var context=')
+        if sk == -1:
+            print(sk, content)
+            return False
+        sk += len('var context=')
+        ek = content.find(';', sk)
+        config = content[sk:ek]
+        self.context = json.loads(config)
+        self.nick = context['username']
+        return True
+
+
+'''
