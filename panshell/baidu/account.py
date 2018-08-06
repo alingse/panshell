@@ -53,8 +53,9 @@ class BaiduAccount(object):
     def handle_verify_code(self, code):
         """Save verify code to filesystem and prompt user to input."""
         r = self.session.get(self.image_url_format.format(code=code))
+
         # FIXME use terminal better
-        img_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'vcode.png')
+        img_path = os.path.expanduser('~/') + 'pansh.{}.vcode.png'.format(hash(self.username))
         with open(img_path, mode='wb') as fp:
             fp.write(r.content)
         print("Saved verification code to {}".format(os.path.dirname(img_path)))
