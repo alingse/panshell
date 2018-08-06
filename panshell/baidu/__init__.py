@@ -3,11 +3,9 @@
 # 2016.10.09
 
 import getpass
-import requests
 
 from panshell.base import FS
-
-from login import login
+from pan import Pan
 
 
 class baiduFS(FS):
@@ -19,8 +17,7 @@ class baiduFS(FS):
         name = kwargs.pop('name', self.name)
         super(baiduFS, self).__init__(name, **kwargs)
 
-        self.session = requests.Session()
-        self.is_login = None
+        self.pan = Pan(name='<new>')
 
     def do_login(self, line):
         """
@@ -32,10 +29,11 @@ class baiduFS(FS):
         if username == '':
             print('not login')
             return
+
         password = getpass.getpass()
-        status = login(self.session, username, password)
-        self.is_login = status
-        print('login', status)
+        self.pan.new_account(username, password)
+        self.pan.login()
+        print('login', self.pan.status)
         return
 
     def do_ls(self, line):
