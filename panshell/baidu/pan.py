@@ -10,10 +10,9 @@ from account import BaiduAccount
 class Pan(object):
 
     def __init__(self, name='default'):
-        self.name = name
+        self._name = name
         self.session = requests.Session()
         self.account = None
-        self.status = None
         self.context = None
 
     def new_account(self, username, password):
@@ -22,8 +21,29 @@ class Pan(object):
 
     def login(self):
         self.account.login()
-        self.status = 'login'
 
     def logout(self):
         self.account = None
         self.session = requests.Session()
+
+    @property
+    def name(self):
+        if not self.account:
+            return self._name
+        name = '{}.{}'.format(self._name, self.account.username)
+        if self.login_status:
+            return name + '[login]'
+        return name
+
+    @property
+    def login_status(self):
+        return self.account.login_status
+
+    def list(self):
+        if not self.login_status:
+            print('need login!')
+        print('do account ls')
+
+    def exit(self):
+        self.logout()
+        print('pan {} exit.'.format(self.name))
