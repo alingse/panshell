@@ -37,7 +37,9 @@ class Pan(object):
 
     @property
     def login_status(self):
-        return self.account.login_status
+        if self.account:
+            return self.account.login_status
+        return False
 
     def list(self):
         if not self.login_status:
