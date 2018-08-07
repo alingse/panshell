@@ -10,10 +10,7 @@ from panshell.base import FS
 
 class Shell(cmd.Cmd):
 
-    _prompt = 'pansh$>'
-
     def __init__(self):
-        self.prompt = self._prompt
         cmd.Cmd.__init__(self)
 
         self.stack = []
@@ -22,6 +19,12 @@ class Shell(cmd.Cmd):
 
         self._funcs = []
         self._keywords = ['use', 'exit']
+
+    @property
+    def prompt(self):
+        if self.fs:
+            return self.fs.prompt
+        return 'pansh$>'
 
     def plugin(self, fscls, **setting):
         if not issubclass(fscls, FS):
@@ -45,6 +48,10 @@ class Shell(cmd.Cmd):
             action = name[3:]
             if action not in self._keywords:
                 return getattr(self.fs, name)
+
+        if name in self.__dict__:
+            return self.__dict__[name]
+
         return cmd.Cmd.__getattr__(name)
 
     def _plugin_in(self, fs):
@@ -67,12 +74,7 @@ class Shell(cmd.Cmd):
         if self.fs is not None:
             self._plugin_out()
         self.fs = fs
-
-        if fs is None:
-            self.prompt = self._prompt
-        else:
-            self.prompt = fs.prompt
-            self._plugin_in(fs)
+        self._plugin_in(fs)
 
     def do_use(self, name):
         """use <fs> 选择使用某个fs
@@ -96,11 +98,8 @@ class Shell(cmd.Cmd):
             print('exit-shell', file=sys.stdout)
             sys.exit(0)
 
-        if 'exit' in self._funcs:
-            self.fs.do_exit(line)
-
-        fs = self.stack.pop()
-        self.set_fs(fs)
+        self.fs.do_exit(line)
+        self.set_fs(self.stack.pop())
 
     def run(self):
         self.cmdloop()
