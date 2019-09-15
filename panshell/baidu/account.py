@@ -2,9 +2,11 @@
 # author@alingse
 # 2018.08.04
 
+import base64
 import json
 import os.path
 import re
+import random
 import time
 
 
@@ -16,7 +18,9 @@ class BaiduAccount(object):
 
     token_url = 'https://passport.baidu.com/v2/api/?getapi&class=login&tpl=mn&tangram=true'
     post_url = 'https://passport.baidu.com/v2/api/?login'
+    disk_home_url = 'https://pan.baidu.com/disk/home'
     image_url_format = 'https://passport.baidu.com/cgi-bin/genimage?{code}'
+
 
     def __init__(self, username, password):
         self.username = username
@@ -25,6 +29,7 @@ class BaiduAccount(object):
         self.session = None
         self.baiduid = None
         self.bduss = None
+        self.login_id = None
 
     def attach_session(self, session):
         self.session = session
@@ -78,6 +83,7 @@ class BaiduAccount(object):
                      'password': self.password, 'verifycode': vcode, 'mem_pass': 'on'}
 
         response = self.session.post(self.post_url, data=post_data)
+        print(response.text)
         return response
 
     def login(self):
@@ -90,12 +96,22 @@ class BaiduAccount(object):
         token = self.get_token()
         response = self.post_login(code, vcode, token)
         # error
-        if 'error=257' in response.text:
+        if 'error=0' not in response.text and '&error=' in response.text:
             code = re.findall('codestring=(.*?)&', response.text)[0]
             vcode = self.handle_verify_code(code)
             response = self.post_login(code, vcode, token)
         self.bduss = response.cookies.get("BDUSS")
+        # 只求实现，以后再说
+        now = str(int(time.time() * 10000)) + '.' + ''.join([str(random.randint(0, 9)) for i in range(17)])
+        self.login_id = base64.b64encode(now)
+
+    def get_bdstoken(self):
+        self.session.get(self.disk_home_url, headers=self.headers)
 
     @property
     def login_status(self):
         return bool(self.bduss and self.baiduid)
+
+    def list_path(self, path):
+        pass
+

@@ -16,11 +16,8 @@ class baiduFS(FS):
     def __init__(self, name='baidu', **kwargs):
         super(baiduFS, self).__init__(name, **kwargs)
 
-        self._pan_map = {}
-        self._pan_id = 0
-        self._current_pan_id = self._pan_id
-        # set default new pan
-        self._new_pan()
+        # 不支持 同时多个 pan(账号) 切换
+        self._current_pan = Pan()
 
     @property
     def prompt(self):
@@ -37,7 +34,7 @@ class baiduFS(FS):
             return None
         return self._pan_map[self._current_pan_id]
 
-    def select(self, pan_id):
+    def select_pan(self, pan_id):
         if pan_id not in self._pan_map:
             return False
         self._current_pan_id = pan_id
@@ -46,7 +43,7 @@ class baiduFS(FS):
         if not line.strip():
             return self._new_pan()
         else:
-            return self.select(int(line.strip()))
+            return self.select_pan(int(line.strip()))
 
     def do_login(self, line):
         """
@@ -60,9 +57,8 @@ class baiduFS(FS):
             return
 
         password = getpass.getpass()
-        self.current_pan.new_account(username, password)
-        self.current_pan.login()
-        print('login', self.current_pan.login_status)
+        self.current_pan.login(username, password)
+        print('login status:', self.current_pan.login_status)
         return
 
     def do_ls(self, line):

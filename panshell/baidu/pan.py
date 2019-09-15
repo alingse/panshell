@@ -9,7 +9,7 @@ from account import BaiduAccount
 
 class Pan(object):
 
-    def __init__(self, name='default'):
+    def __init__(self, name=''):
         self._name = name
         self.session = requests.Session()
         self.account = None

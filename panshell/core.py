@@ -28,7 +28,7 @@ class Shell(cmd.Cmd):
 
     def plugin(self, fscls, **setting):
         if not issubclass(fscls, FS):
-            raise Exception('must inherit `panshell.core.FS`')
+            raise Exception('must inherit `panshell.base.FS`')
 
         name = fscls.name
         if name in self.fsmap:
